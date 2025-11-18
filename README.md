@@ -13,12 +13,298 @@ A clinical summarization dashboard that uses Google Cloud services and Gemini Pr
 
 ## Architecture
 
+### High-Level Overview
+
 ```
 CareLens 360
 ├── Google Cloud Storage (GCS)     → Stores patient folders with medical images
 ├── Gemini Pro Vision API          → Generates clinical summaries from images
 ├── Firestore                      → Stores summaries and metadata
 └── Streamlit UI                   → Interactive dashboard for users
+```
+
+### Detailed Architecture Diagram
+
+```
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           CARELENS 360 ARCHITECTURE                              ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                              PRESENTATION LAYER                                  │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌────────────────────────────────────────────────────────────────────────┐    │
+│  │                      Streamlit Web Interface                            │    │
+│  │                         (src/app.py)                                    │    │
+│  │                                                                          │    │
+│  │  Features:                                                               │    │
+│  │  • Patient folder scanning                                              │    │
+│  │  • File upload & management                                             │    │
+│  │  • Clinical summary display                                             │    │
+│  │  • File-wise analysis views                                             │    │
+│  │  • Combined report generation                                           │    │
+│  │  • Q&A interface (natural language queries)                             │    │
+│  │  • Glassmorphism UI with dark theme                                     │    │
+│  └────────────────────────────────────────────────────────────────────────┘    │
+│                                       │                                          │
+└───────────────────────────────────────┼──────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                            APPLICATION LAYER                                     │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────┐      │
+│  │                     Configuration Manager                             │      │
+│  │                        (src/config.py)                                │      │
+│  │                                                                        │      │
+│  │  • Environment variable management                                    │      │
+│  │  • GCP Project ID, GCS Bucket, Firestore Collection                  │      │
+│  │  • Gemini API Key & Model configuration                               │      │
+│  │  • Image format & size validation                                     │      │
+│  │  • Configuration validation                                            │      │
+│  └──────────────────────────────────────────────────────────────────────┘      │
+│                                                                                  │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐        │
+│  │   GCS Client    │  │ Gemini Client   │  │  Firestore Client       │        │
+│  │  (gcs_client)   │  │(gemini_client)  │  │ (firestore_client)      │        │
+│  │                 │  │                 │  │                         │        │
+│  │ • List patients │  │ • Image         │  │ • Save summaries        │        │
+│  │ • List images   │  │   analysis      │  │ • Query by patient      │        │
+│  │ • Download      │  │ • Clinical      │  │ • NL search             │        │
+│  │   images        │  │   summary       │  │ • Get all patients      │        │
+│  │ • Upload images │  │   generation    │  │ • Measurement query     │        │
+│  │ • Get metadata  │  │ • JSON parsing  │  │ • Timestamp mgmt        │        │
+│  │ • Format        │  │ • Fallback      │  │ • Composite keys        │        │
+│  │   validation    │  │   models        │  │                         │        │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────────────┘        │
+│           │                    │                     │                          │
+└───────────┼────────────────────┼─────────────────────┼──────────────────────────┘
+            │                    │                     │
+            ▼                    ▼                     ▼
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                         EXTERNAL SERVICES LAYER                                  │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐  │
+│  │  Google Cloud        │  │   Gemini Pro/Flash   │  │   Cloud Firestore    │  │
+│  │  Storage (GCS)       │  │      Vision API      │  │    (NoSQL DB)        │  │
+│  │                      │  │                      │  │                      │  │
+│  │  Bucket Structure:   │  │  Models:             │  │  Collection:         │  │
+│  │  ├─ patient-1/       │  │  • gemini-1.5-pro    │  │  clinical_summaries  │  │
+│  │  │  ├─ report1.png   │  │  • gemini-1.5-flash  │  │                      │  │
+│  │  │  ├─ scan1.jpg     │  │  • gemini-pro-vision │  │  Document Schema:    │  │
+│  │  │  └─ lab1.tiff     │  │                      │  │  {                   │  │
+│  │  ├─ patient-2/       │  │  Analysis:           │  │   patient_name,      │  │
+│  │  │  └─ ...           │  │  • Clinical summary  │  │   image_name,        │  │
+│  │  └─ ...              │  │  • Measurements      │  │   summary,           │  │
+│  │                      │  │  • Abnormalities     │  │   measurements,      │  │
+│  │  Features:           │  │  • Prescriptions     │  │   abnormalities,     │  │
+│  │  • Hierarchical      │  │  • Exercise recs     │  │   prescriptions,     │  │
+│  │    folder structure  │  │  • Dietary advice    │  │   exercises,         │  │
+│  │  • Image versioning  │  │  • Recommendations   │  │   dietary,           │  │
+│  │  • Metadata storage  │  │                      │  │   recommendations,   │  │
+│  │  • Access control    │  │  Safety Filters:     │  │   created_at,        │  │
+│  │                      │  │  • Content blocking  │  │   updated_at,        │  │
+│  │  Supported Formats:  │  │  • Recitation check  │  │   model_used         │  │
+│  │  PNG, JPG, JPEG,     │  │  • Error handling    │  │  }                   │  │
+│  │  GIF, BMP, TIFF,     │  │                      │  │                      │  │
+│  │  WEBP                │  │  Response Format:    │  │  Features:           │  │
+│  │                      │  │  • Structured JSON   │  │  • Patient queries   │  │
+│  │  Max Size: 10MB      │  │  • Markdown parsing  │  │  • NL search         │  │
+│  └──────────────────────┘  └──────────────────────┘  │  • Sorting           │  │
+│                                                       │  • Timestamp mgmt    │  │
+│                                                       └──────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                              DATA FLOW                                           │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                    1. Patient Folder Scanning Flow                      │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│     User Selection                                                               │
+│          │                                                                       │
+│          ▼                                                                       │
+│     List Patients ──────► GCS Client ──────► List folders in bucket            │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Select Patient ─────► List Patient Images ────► Get all images             │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Scan & Analyze                                                               │
+│          │                                                                       │
+│          ├──► For each image:                                                   │
+│          │    1. Download from GCS ────────────────────┐                        │
+│          │                                              │                        │
+│          │    2. Send to Gemini API ───────────────────┼──► Analyze image       │
+│          │                                              │    Extract data        │
+│          │    3. Parse JSON response ◄─────────────────┘    Generate summary    │
+│          │                                                                       │
+│          │    4. Save to Firestore ─────────────────────► Store summary         │
+│          │                                                  + metadata           │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Display Results ──► Aggregated Analysis                                     │
+│                      ├─► Overview (abnormalities, measurements)                 │
+│                      ├─► File-wise breakdown                                    │
+│                      └─► Combined recommendations                               │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                    2. New Patient Upload Flow                           │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│     User Input                                                                   │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Enter Patient Name + Upload Files                                           │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Validate Input ────► Check name & files                                     │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Upload to GCS ─────► For each file:                                         │
+│          │                Create patient_name/filename path                     │
+│          │                Upload with metadata                                  │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Auto-Scan ─────────► Trigger scan_patient_folder()                          │
+│          │                (same as flow 1)                                      │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Display Results                                                              │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                    3. Q&A Natural Language Query Flow                   │   │
+│  └─────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                  │
+│     User Query                                                                   │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Enter Question ────► "What are the main concerns?"                          │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Fetch Context ─────► Get all summaries from Firestore                       │
+│          │                for current patient                                   │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Build Prompt ──────► Combine query + all summaries                          │
+│          │                + measurements + abnormalities                        │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Send to Gemini ────► Generate contextual answer                             │
+│          │                                                                       │
+│          ▼                                                                       │
+│     Display Answer ────► Show in UI                                             │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                          DEPLOYMENT ARCHITECTURE                                 │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────┐      │
+│  │                        Development Environment                        │      │
+│  │                                                                        │      │
+│  │  • Local Python environment (venv)                                    │      │
+│  │  • Streamlit dev server (port 8501)                                   │      │
+│  │  • .env file for configuration                                        │      │
+│  │  • GCloud CLI authentication                                          │      │
+│  │  • run_local.py script                                                │      │
+│  └──────────────────────────────────────────────────────────────────────┘      │
+│                                                                                  │
+│  ┌──────────────────────────────────────────────────────────────────────┐      │
+│  │                        Production Environment                         │      │
+│  │                                                                        │      │
+│  │  ┌─────────────────────────────────────────────────────────────┐    │      │
+│  │  │                    Google Cloud Run                          │    │      │
+│  │  │                                                               │    │      │
+│  │  │  • Containerized deployment (Docker)                         │    │      │
+│  │  │  • Auto-scaling (0 to N instances)                           │    │      │
+│  │  │  • HTTPS endpoint with Cloud Load Balancer                   │    │      │
+│  │  │  • Service account authentication                            │    │      │
+│  │  │  • Environment variables injection                           │    │      │
+│  │  │  • Memory: 2GB, CPU: 2 cores                                 │    │      │
+│  │  │  • Timeout: 3600s (1 hour)                                   │    │      │
+│  │  │  • Region: us-central1 (configurable)                        │    │      │
+│  │  └─────────────────────────────────────────────────────────────┘    │      │
+│  │                                                                        │      │
+│  │  Build Process:                                                        │      │
+│  │  1. Cloud Build (cloudbuild.yaml)                                     │      │
+│  │  2. Docker image creation (Dockerfile)                                │      │
+│  │  3. Push to Container Registry                                        │      │
+│  │  4. Deploy to Cloud Run                                               │      │
+│  │  5. Configure IAM permissions                                         │      │
+│  └──────────────────────────────────────────────────────────────────────┘      │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                          SECURITY & PERMISSIONS                                  │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐       │
+│  │                       Service Account                                │       │
+│  │                                                                       │       │
+│  │  Required Roles:                                                     │       │
+│  │  • roles/storage.objectViewer      (GCS read access)                │       │
+│  │  • roles/storage.objectCreator     (GCS write access)               │       │
+│  │  • roles/datastore.user            (Firestore read/write)           │       │
+│  │  • roles/run.admin                 (Cloud Run deployment)           │       │
+│  └─────────────────────────────────────────────────────────────────────┘       │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐       │
+│  │                       API Keys & Secrets                             │       │
+│  │                                                                       │       │
+│  │  • GEMINI_API_KEY: External API (Google AI Studio)                  │       │
+│  │  • GCP credentials: Service account JSON or ADC                     │       │
+│  │  • Environment variables (never committed to git)                   │       │
+│  │  • Option: Google Secret Manager integration                        │       │
+│  └─────────────────────────────────────────────────────────────────────┘       │
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐       │
+│  │                       Data Privacy                                   │       │
+│  │                                                                       │       │
+│  │  • Healthcare compliance (HIPAA, etc.)                              │       │
+│  │  • Patient data encryption (in-transit & at-rest)                   │       │
+│  │  • Audit logging enabled                                            │       │
+│  │  • No client authentication (recommend adding for production)       │       │
+│  └─────────────────────────────────────────────────────────────────────┘       │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                            ERROR HANDLING & RESILIENCE                           │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  • GCS Client: Blob existence checks, size validation, format validation        │
+│  • Gemini Client: Fallback models, safety filter handling, JSON parsing         │
+│  • Firestore Client: Exception handling, timestamp management                   │
+│  • App Layer: Progress tracking, error display, partial success handling        │
+│  • Logging: Comprehensive logging at INFO/WARNING/ERROR levels                  │
+│  • User Feedback: Real-time progress bars, status messages, error details       │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                              TECHNOLOGY STACK                                    │
+├──────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  Frontend:     Streamlit 1.28+ (Python web framework)                           │
+│  Backend:      Python 3.11+                                                      │
+│  AI/ML:        Google Gemini Pro Vision API                                      │
+│  Storage:      Google Cloud Storage                                              │
+│  Database:     Cloud Firestore (NoSQL)                                           │
+│  Image Proc:   PIL/Pillow                                                        │
+│  Cloud:        Google Cloud Platform                                             │
+│  Container:    Docker                                                            │
+│  CI/CD:        Cloud Build                                                       │
+│  Deploy:       Cloud Run (serverless)                                            │
+│                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Tech Stack
