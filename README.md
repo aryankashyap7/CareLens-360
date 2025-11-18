@@ -92,9 +92,9 @@ CareLens 360
 │  │  Storage (GCS)       │  │      Vision API      │  │    (NoSQL DB)        │  │
 │  │                      │  │                      │  │                      │  │
 │  │  Bucket Structure:   │  │  Models:             │  │  Collection:         │  │
-│  │  ├─ patient-1/       │  │  • gemini-1.5-pro    │  │  clinical_summaries  │  │
+│  │  ├─ patient-1/       │  │  • gemini-2.5-flash  │  │  clinical_summaries  │  │
 │  │  │  ├─ report1.png   │  │  • gemini-1.5-flash  │  │                      │  │
-│  │  │  ├─ scan1.jpg     │  │  • gemini-pro-vision │  │  Document Schema:    │  │
+│  │  │  ├─ scan1.jpg     │  │  • gemini-1.5-pro    │  │  Document Schema:    │  │
 │  │  │  └─ lab1.tiff     │  │                      │  │  {                   │  │
 │  │  ├─ patient-2/       │  │  Analysis:           │  │   patient_name,      │  │
 │  │  │  └─ ...           │  │  • Clinical summary  │  │   image_name,        │  │
@@ -295,7 +295,7 @@ CareLens 360
 │                                                                                  │
 │  Frontend:     Streamlit 1.28+ (Python web framework)                           │
 │  Backend:      Python 3.11+                                                      │
-│  AI/ML:        Google Gemini Pro Vision API                                      │
+│  AI/ML:        Google Gemini 2.5 Flash API (with vision capabilities)           │
 │  Storage:      Google Cloud Storage                                              │
 │  Database:     Cloud Firestore (NoSQL)                                           │
 │  Image Proc:   PIL/Pillow                                                        │
@@ -311,7 +311,7 @@ CareLens 360
 
 - **Streamlit**: Web UI framework
 - **Google Cloud Storage**: Image storage and retrieval
-- **Gemini Pro Vision API**: Medical image analysis and summarization
+- **Gemini 2.5 Flash API**: Medical image analysis and summarization with vision capabilities
 - **Firestore**: NoSQL database for storing summaries
 - **Python 3.11+**: Backend language
 
@@ -397,8 +397,8 @@ CareLens-360/
    GCS_BUCKET_NAME=your-bucket-name
    FIRESTORE_COLLECTION=clinical_summaries
    GEMINI_API_KEY=your-gemini-api-key
-   # Optional – defaults to gemini-1.5-pro in code
-   GEMINI_MODEL=gemini-1.5-pro
+   # Optional – defaults to gemini-2.5-flash in code
+   GEMINI_MODEL=gemini-2.5-flash
    ```
 
 5. **Set up Google Cloud credentials**:
@@ -494,7 +494,7 @@ Set the following environment variables in Cloud Run:
 - `GCS_BUCKET_NAME`: Your GCS bucket name
 - `GEMINI_API_KEY`: Your Gemini API key
 - `FIRESTORE_COLLECTION`: Firestore collection name (default: `clinical_summaries`)
-- `GEMINI_MODEL`: Gemini model to use (default in code: `gemini-1.5-pro`)
+- `GEMINI_MODEL`: Gemini model to use (default in code: `gemini-2.5-flash`)
 
 ### Service Account Permissions
 
@@ -539,7 +539,7 @@ Each document in Firestore has the following structure:
   "recommendations": ["recommendation 1", "recommendation 2"],
   "created_at": "2025-01-01T00:00:00Z",
   "updated_at": "2025-01-01T00:00:00Z",
-  "model_used": "gemini-1.5-pro"
+  "model_used": "gemini-2.5-flash"
 }
 ```
 
