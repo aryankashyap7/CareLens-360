@@ -1,7 +1,7 @@
 # CareLens 360 🏥
 
 A clinical summarization dashboard that uses Google Cloud services and Gemini Pro Vision API to analyze medical images and generate clinical summaries.
-
+https://aryankashyap7.medium.com/carelens-360-a-360-view-of-care-for-patients-and-caregivers-77dbc5f04e5f?postPublishedType=repub
 ## Features
 
 - **📸 Scan Patient Folders**: Automatically scan patient folders in Google Cloud Storage and generate clinical summaries for all medical images
